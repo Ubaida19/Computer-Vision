@@ -27,9 +27,9 @@ for i in range(gray_img.shape[0]):
     for j in range(gray_img.shape[1]):
         local_mean = np.mean(gray_img[i:i+blocK_size, j:j+blocK_size])
         if gray_img[i, j] > (local_mean+const):
-            new_img[i, j] = 255
-        else:
             new_img[i, j] = 0
+        else:
+            new_img[i, j] = 255
 
 
 cv.imshow('Colored Image', org_img)
