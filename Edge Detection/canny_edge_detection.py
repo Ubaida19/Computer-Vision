@@ -8,10 +8,9 @@ def generate_gaussian_filter(sigma: int | float, filter_shape: list | tuple | No
     n_half = n//2
 
     gaussian_filter = np.zeros(shape=(m, n), dtype=np.float32)
-
+    normal = 1/(2.0*np.pi*sigma**2.0)
     for y in range(-m_half, m_half+1):
         for x in range(-n_half, n_half+1):
-            normal = 1/(2.0*np.pi*sigma**2.0)
             exp_term = np.exp(-(x**2.0 + y**2.0) / (2.0 * sigma ** 2.0))
             gaussian_filter[y+m_half, x+n_half] = normal * exp_term
     print('Gaussian filter generated')
