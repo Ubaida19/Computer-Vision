@@ -1,5 +1,8 @@
+import math
+
 import numpy as np
 import cv2 as cv
+
 
 def apply_sobel(image: np.ndarray):
     sobel_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=np.float32)
@@ -7,21 +10,41 @@ def apply_sobel(image: np.ndarray):
 
     # Dimensions of input image and kernel
     img_height, img_width = image.shape
+
+    # Add padding
+    padded_img = np.pad(image, 1, mode='constant', constant_values=0)
+
     # Dimension of output image
-    output_height = img_height - 3 + 1
-    output_width = img_width - 3 + 1
-    # Initialize the output image
-    gradient_x = np.zeros((output_height, output_width))
-    gradient_y = np.zeros((output_height, output_width))
-    for y in range(output_height):
-        for x in range(output_width):
-            gradient_x[y, x] = np.sum(image[y:y + 3, x:x + 3] * sobel_x)
+    gradient_x = np.zeros((img_height, img_width))
+    gradient_y = np.zeros((img_height, img_width))
+    
+    # Calculating horizontal gradient
+    for y in range(img_height):
+        for x in range(img_width):
+            window = padded_img[y:y + 3, x:x + 3]
+            gradient_x[y, x] = np.sum(window * sobel_x)
+
     print('Sobel X done!')
-    for y in range(output_height):
-        for x in range(output_width):
-            gradient_y[y, x] = np.sum(image[y:y + 3, x:x + 3] * sobel_y)
+    # Calculating vertical gradient
+    for y in range(img_height):
+        for x in range(img_width):
+            window = padded_img[y:y + 3, x:x + 3]
+            gradient_y[y, x] = np.sum(window * sobel_y)
     print('Sobel Y done!')
-    gradient = gradient_x + gradient_y
+
+    # Normalization (divide by the maximum gradient magnitude)
+    max_gradient = np.max(np.abs(gradient_x) + np.abs(gradient_y))
+    gradient_x /= max_gradient
+    gradient_y /= max_gradient
+    
+    # Applying the formula.
+    gradient_x_squared = gradient_x * gradient_x
+    gradient_y_squared = gradient_y * gradient_y
+
+    gradient = np.zeros((img_height, img_width))
+    for i in range(img_height):
+        for j in range(img_width):
+            gradient[i][j] = math.sqrt(gradient_x_squared[i][j] + gradient_y_squared[i][j])
 
     cv.imshow('GradientX', gradient_x)
     cv.waitKey(0)
@@ -32,7 +55,7 @@ def apply_sobel(image: np.ndarray):
     cv.destroyAllWindows()
 
 
-img = cv.imread('img2.jpg', cv.IMREAD_GRAYSCALE)
+img = cv.imread('scotter.jpg', cv.IMREAD_GRAYSCALE)
 width = 1366
 height = 768
 dim = (width, height)
