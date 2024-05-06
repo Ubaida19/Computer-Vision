@@ -1,6 +1,6 @@
 import cv2 as cv
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 def generate_gaussian_filter(sigma: int | float, filter_shape: list | tuple | None):
     m, n = filter_shape
@@ -105,23 +105,47 @@ def non_maximum_suppression(gradient, theta):
     return result
 
 
+def double_threshold(image, high_thresh_ratio=0.05, low_thresh_ratio=0.09):
+    high_thresh = high_thresh_ratio * image.max()
+    low_thresh = low_thresh_ratio * high_thresh
+    height, width = image.shape
+    result = np.zeros((height, width), dtype=np.int8)
+
+    weak = np.uint(0)
+    strong = np.uint8(255)
+
+    strong_i, strong_j = np.where(image >= high_thresh)
+
+    weak_i, weak_j = np.where((image >= low_thresh) & (image <= high_thresh))
+
+    result[strong_i, strong_j] = strong
+    result[weak_i, weak_j] = weak
+    return result
+
+
 def hysteresis_threshold(image, high_thresh, low_thresh):
-    output_img = np.zeros_like(image)
-
-    output_img[image >= high_thresh] = 0
-    output_img[(image >= low_thresh) & (image < high_thresh)] = 255
-
-    weak_edges_rows, weak_edges_cols = np.where((image >= low_thresh) & (image < high_thresh))
-
-    for i in range(len(weak_edges_rows)):
-        row, col = weak_edges_rows[i], weak_edges_cols[i]
-        for neighbor_row in [-1, 0, 1]:
-            for neighbor_column in [-1, 0, 1]:
-                if ((0 <= (row + neighbor_row) < image.shape[0]) and (0 <= (col + neighbor_column) < image.shape[1]) and (output_img[row + neighbor_row, col + neighbor_column] == 255)):
-                    output_img[row, col] = 255
-                    break
+    threshold_img = double_threshold(image, high_thresh, low_thresh)
+    height, width = threshold_img.shape
+    strong = 255
+    for i in range(1, height - 1):
+        for j in range(1, width - 1):
+            if threshold_img[i, j] == 0:
+                if ((threshold_img[i + 1, j - 1] == strong) or
+                    (threshold_img[i + 1, j] == strong) or
+                    (threshold_img[i + 1, j + 1] == strong) or
+                    (threshold_img[i, j - 1] == strong) or
+                    (threshold_img[i, j + 1] == strong) or
+                    (threshold_img[i - 1, j - 1] == strong) or
+                    (threshold_img[i - 1, j] == strong) or
+                    (threshold_img[i - 1, j + 1] == strong)):
+                    threshold_img[i, j] = strong
+                else:
+                    threshold_img[i, j] = 0
+    result = threshold_img.astype(np.float32)
+    result *= (255.0 / strong)
+    result = result.astype(np.uint8)
     print('Hysteresis threshold done')
-    return output_img
+    return result
 
 
 def main():
@@ -150,15 +174,17 @@ def main():
     # 4. Apply non-maximum suppression
     non_maximum = non_maximum_suppression(magnitude, direction)
 
-    # 5. Apply hysterises filter
-    high_thresh = float(input('Enter the value of high threshold: '))
-    low_thresh = float(input('Enter the value of low threshold: '))
-    final_result = hysteresis_threshold(non_maximum, high_thresh, low_thresh)
 
+    # 5. Apply hysterises filter
+    high_thresh = float(input('Enter the value of high threshold Ratio: '))
+    low_thresh = float(input('Enter the value of low threshold Ratio: '))
+    final_result = hysteresis_threshold(non_maximum, high_thresh, low_thresh)
+    canny_img = cv.Canny(image=gray_resized, threshold1=100, threshold2=150, apertureSize=3)
     # 6. Show the result
     cv.imshow('Original image', img)
     cv.imshow('Grayed convolution', gray_resized)
     cv.imshow('Result', final_result)
+    cv.imshow('Canny', canny_img)
     cv.waitKey(0)
     cv.destroyAllWindows()
 
